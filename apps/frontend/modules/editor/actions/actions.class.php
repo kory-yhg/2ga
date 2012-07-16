@@ -97,4 +97,52 @@ class editorActions extends sfActions
     }
   }
 
+  public function executeMarkdown(sfWebRequest $request)
+  {
+
+    $db_obj = new IdeProject();
+    $this->forward404Unless($db_obj->hasAccess($request->getParameter('project'), $this->getUser()->getGuardUser()->getId()));
+
+    $this->pj_detail = $db_obj->getDetail($request->getParameter('project'));
+    $this->project_id = escapeshellcmd($request->getParameter('project'));
+    $this->ide_project = Doctrine_Core::getTable('IdeProject')->find(array($request->getParameter('project')));
+    $user = $this->getUser()->getGuardUser()->getUsername();
+
+    $path=TogaSettings::getDataDir() . '/users/' . $user . '/projects/' . $this->ide_project->getName() . '/`README.md';
+    $msg = $this->checkPath($path);
+    if (null != $msg)
+    {
+      $this->msg = $msg;
+      return sfView::ERROR;
+    }
+    $src = file_get_contents(escapeshellcmd($path));
+
+
+    $this->data=$src;
+  }
+
+  public function checkPath($path)
+  {
+    $pathparts = explode("/", $path);
+    if (2 > count($pathparts))
+    {
+      return "too short path";
+    }
+    if ('' != $pathparts[0])
+    {
+      return "You must start from /";
+    }
+    if (!preg_match('{' . TogaSettings::getDataDir() . '/*}', $path))
+    {
+      return $path . "is not in home";
+    }
+    if (0 != preg_match('{/[.]{2,}?/}', $path))
+    {
+      return "You cannot go up";
+    }
+
+    return null;
+  }
+
+
 }
